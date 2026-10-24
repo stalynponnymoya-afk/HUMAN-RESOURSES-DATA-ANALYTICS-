@@ -1,64 +1,138 @@
-# Smart Cargo - Talent Retention Analytics
+# Smart Cargo — Predicción de Deserción de Talento (HR Attrition Prediction)
 
-## Descripción / Description
+Sistema de machine learning que anticipa qué empleados tienen mayor probabilidad
+de abandonar la empresa, para que el área de Recursos Humanos pueda intervenir
+antes de perder el talento.
 
-**Español:**
-Smart Cargo es un proyecto enfocado en la retención de talento usando análisis de datos y machine learning. El script `smart_cargo.py` realiza limpieza de datos, estandarización de variables categóricas, imputación de valores faltantes y análisis exploratorio inicial para preparar un dataset de recursos humanos en el que se busca predecir la deserción o retención de empleados.
+---
 
-**English:**
-Smart Cargo is a project focused on talent retention using data analytics and machine learning. The `smart_cargo.py` script performs data cleaning, categorical variable standardization, missing value imputation, and initial exploratory analysis to prepare a human resources dataset for predicting employee churn.
+## 1. Contexto de Negocio
 
-## Qué hace el script / What the script does
+La rotación de personal es uno de los costos más silenciosos de una organización.
+Cada salida arrastra:
 
-- Carga un archivo Excel llamado `base_proyecto_.xlsx`.
-- Muestra información general del dataset y describe sus variables.
-- Estandariza columnas categóricas a minúsculas y reemplaza espacios por `_`.
-- Identifica y corrige valores nulos en columnas clave como `sueldo`, `area`, y `edad`.
-- Imputa sueldos faltantes basándose en cargos específicos (`asesor_comercial`, `auxiliar_de_servicios_en_general`) y por empresa.
-- Calcula promedios y modas para realizar imputaciones más inteligentes.
-- Ejecuta una fase inicial de exploración de datos para analizar la distribución del target `DESERCION`, el desbalance de clases y los outliers.
-- Genera gráficos de análisis exploratorio usando `matplotlib`.
+- **Costo de reemplazo** — reclutamiento, selección y onboarding de un perfil nuevo.
+- **Pérdida de productividad** — meses de curva de aprendizaje hasta recuperar el
+  rendimiento del empleado que se fue.
+- **Impacto en el equipo** — sobrecarga y desmotivación de quienes se quedan.
+- **Riesgo de fuga en cascada** — la salida de perfiles clave arrastra a otros.
 
-## Dependencias / Dependencies
+Detectar la rotación *después* de que ocurre solo permite medir el daño. El valor
+real está en **anticiparla**: identificar de forma temprana a los empleados en
+riesgo y actuar con planes de retención focalizados (revisión salarial, ajuste de
+carga, intervención sobre clima y estrés).
 
-El script requiere las siguientes librerías de Python:
+## 2. Solución Predictiva
 
-- pandas
-- numpy
-- matplotlib
-- seaborn
-- scikit-learn
-- xgboost
-- imbalanced-learn
-- shap (opcional)
-- openpyxl
+El proyecto construye un modelo de clasificación binaria que estima la
+probabilidad de deserción de cada empleado (`DESERCION = 1`).
 
-## Instrucciones / Instructions
+- **Datos:** registros de empleados con variables de cargo, sueldo, antigüedad,
+  clima laboral, estrés, ausentismo y atenciones médicas.
+- **Enfoque:** limpieza e imputación guiada por los datos, ingeniería de
+  variables, balanceo con SMOTE y entrenamiento de tres modelos comparables.
+- **Modelos:** XGBoost, Random Forest y Regresión Logística.
+- **Métrica principal:** **PR-AUC**, la adecuada ante un target fuertemente
+  desbalanceado. Se reportan además F1-Score y ROC-AUC.
+- **Interpretabilidad:** valores **SHAP** para explicar qué variables empujan el
+  riesgo de cada predicción, requisito indispensable para que Recursos Humanos
+  confíe en la herramienta.
 
-1. Coloca el archivo de datos `base_proyecto_.xlsx` en el mismo directorio o súbelo si estás en Google Colab.
-2. Ejecuta el script `smart_cargo.py`.
-3. Revisa la salida en consola y las visualizaciones generadas para entender las etapas de limpieza y análisis.
+El pipeline es **modular y reproducible**: la limpieza, la ingeniería de
+variables, el entrenamiento y la evaluación viven en módulos independientes bajo
+`src/`, y no hay dependencias de entornos cloud.
 
-**Nota:** El script está diseñado para ejecutarse en un entorno tipo Jupyter/Google Colab, ya que utiliza `files.upload()` para cargar archivos.
+## 3. Estructura del Repositorio
 
-## Archivo de entrada / Input file
-
-- `base_proyecto_.xlsx` - Dataset principal de empleados.
-
-## Estructura esperada del dataset / Expected dataset structure
-
-Se espera que el dataset contenga columnas relevantes de recursos humanos como:
-
-- `cargo`
-- `sueldo`
-- `empresa_gestion`
-- `area`
-- `edad`
-- `DESERCION`
-
-## Uso rápido / Quick start
-
-```bash
-python smart_cargo.py
+```
+hr-attrition-prediction/
+├── data/
+│   ├── raw/                     # Datos originales (no versionados)
+│   │   └── base_proyecto_.xlsx
+│   └── processed/               # Datos limpios generados por el pipeline
+├── notebooks/
+│   └── eda.ipynb                # Fase 1: análisis exploratorio y visualizaciones
+├── src/
+│   ├── __init__.py
+│   ├── config.py                # Rutas, parámetros y nombres de columnas
+│   ├── data_processing.py       # Carga, estandarización e imputación
+│   ├── feature_engineering.py   # Fase 2: features, encoding, escalado, split
+│   ├── train_model.py           # Fase 3: XGBoost, Random Forest, Reg. Logística
+│   ├── evaluate.py              # Fases 4 y 5: métricas, gráficos y SHAP
+│   └── main.py                  # Orquestador end-to-end
+├── models/                      # Artefactos de modelos entrenados (no versionados)
+├── reports/
+│   └── figures/                 # Gráficos exportados (no versionados)
+├── .gitignore
+├── requirements.txt
+└── README.md
 ```
 
+**Nota sobre datos:** `data/` está excluido vía `.gitignore` para evitar subir
+información de empleados (posible PII) a un repositorio público. Coloca el
+archivo original en `data/raw/` antes de ejecutar.
+
+## 4. Instalación y Uso Local
+
+### Requisitos
+
+- Python 3.10 o superior
+- pip
+
+### Pasos
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/<usuario>/hr-attrition-prediction.git
+cd hr-attrition-prediction
+
+# 2. Crear y activar un entorno virtual
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 3. Instalar dependencias
+pip install -r requirements.txt
+
+# 4. Colocar el dataset original
+#    Copia el archivo en: data/raw/base_proyecto_.xlsx
+
+# 5. Ejecutar el pipeline completo
+python -m src.main
+```
+
+Opciones disponibles:
+
+```bash
+python -m src.main --input data/raw/otro_archivo.xlsx   # ruta de entrada explícita
+python -m src.main --output data/processed/clean.csv    # ruta de salida explícita
+python -m src.main --no-save                            # no persistir datos limpios
+```
+
+### Análisis exploratorio
+
+El notebook de la Fase 1 es autocontenido y consume los módulos de `src/`:
+
+```bash
+jupyter notebook notebooks/eda.ipynb
+```
+
+### Salidas
+
+- `data/processed/` — dataset limpio listo para modelar.
+- `reports/figures/` — curvas ROC y Precision-Recall, matriz de confusión,
+  importancias de variables y resumen SHAP.
+- Consola — tabla comparativa maestra de métricas y modelo ganador.
+
+## 5. Fases del Proyecto
+
+| Fase | Contenido | Ubicación |
+|------|-----------|-----------|
+| 1 | Exploración y análisis inicial | `notebooks/eda.ipynb` |
+| 2 | Feature engineering y preprocesamiento | `src/feature_engineering.py` |
+| 3 | Modelamiento (3 algoritmos) | `src/train_model.py` |
+| 4 | Resultados y visualizaciones | `src/evaluate.py` |
+| 5 | Cuantificación y comparación | `src/evaluate.py` |
+
+---
+
+Proyecto de portafolio de analítica de datos aplicada a Recursos Humanos.
